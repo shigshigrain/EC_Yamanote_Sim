@@ -49,7 +49,7 @@ bool SimulateEngine::Init()
 	node_order = std::make_unique<NODE[]>(N_node);
 	branch = std::make_unique<BRANCH[]>(N_branch);
 
-	t = 0.0;
+	timer = 0.0;
 	minute = 0.0;
 
 	sub_total = 0.0;
@@ -59,14 +59,9 @@ bool SimulateEngine::Init()
 
 void SimulateEngine::Make_train(TRAIN& tra, const INI_TRA& ini, int i)
 {
-	int m;
+	/*int m;
 	int n;
-
-	//*tra = (TRAIN*)malloc(sizeof(TRAIN));
-	//if (*tra == NULL)
-	//{
-	//	//ÉGÉâÅ[èàóù
-	//}
+	*/
 
 	tra.name_train = i;
 	tra.Type = ini.Type;
@@ -208,8 +203,6 @@ void SimulateEngine::Make_train(TRAIN& tra, const INI_TRA& ini, int i)
 	tra.Esiv_coa_c = 0.0;
 	tra.Esiv_stp_c = 0.0;
 
-
-
 	tra.Evh = 0.0;				//óÒé‘ì¸èoóÕÉGÉlÉãÉMÅ[[J]
 	tra.Evh_in = 0.0;			//óÒé‘ì¸óÕÉGÉlÉãÉMÅ[[J]
 	tra.Evh_out = 0.0;			//óÒé‘èoóÕÉGÉlÉãÉMÅ[[J]
@@ -278,13 +271,13 @@ void SimulateEngine::Make_train(TRAIN& tra, const INI_TRA& ini, int i)
 	tra.T_delay = ini.T_delay;
 	tra.Vst = Vss1;
 
-	for (m = 0; m < rownum; m++)
+	/*for (m = 0; m < rownum; m++)
 	{
 		for (n = 0; n < 2; n++)
 		{
 			tra.route[m][n] = 0;
 		}
-	}
+	}*/
 }
 
 void SimulateEngine::Make_substation(SUB& sub, const INI_SUB& ini, int i)
@@ -608,10 +601,10 @@ void SimulateEngine::change_direction(TRAIN& tra)
 	}
 }
 
-void SimulateEngine::decide_final_station(TRAIN& tra, int i)
+void SimulateEngine::decide_final_station(TRAIN& tra, size_t i)
 {
 	if (tra.Type == 0 || tra.Type == 9 || tra.Type == 10 || tra.Type == 11 || tra.Type == 12 || tra.Type == 13 || tra.Type == 14) {
-		if (tra.direction == 1.0)			//írë‹ÅÀèaíJ
+		if (tra.direction == 1)			//írë‹ÅÀèaíJ
 		{
 			if (i == NUM_station)
 			{
@@ -645,7 +638,7 @@ void SimulateEngine::decide_final_station(TRAIN& tra, int i)
 		}
 	}
 	else if (tra.Type == 1) {
-		if (tra.direction == 1.0)			//ëÂã{ÅÀêÅè„ï˚ñ 
+		if (tra.direction == 1)			//ëÂã{ÅÀêÅè„ï˚ñ 
 		{
 			if (i == NUM_station2)
 			{
@@ -678,9 +671,9 @@ void SimulateEngine::decide_final_station(TRAIN& tra, int i)
 }
 
 //Ç±Ç±ÇïœÇ¶ÇΩÇ¢by Kasai1012
-void SimulateEngine::Run_pattern(TRAIN& tra, const STATION* sta, double t, std::vector<double> wait_time)
+void SimulateEngine::Run_pattern(TRAIN& tra, const STATION* sta, double t, std::vector<double>& WaitTimeIN, std::vector<double>& WaitTimeOUT)
 {
-	int i = 0;
+	size_t itr = 0;
 
 	tra.t_stop = t;
 
@@ -689,11 +682,12 @@ void SimulateEngine::Run_pattern(TRAIN& tra, const STATION* sta, double t, std::
 	if (tra.Type == 0 || tra.Type == 9 || tra.Type == 10 || tra.Type == 11 || tra.Type == 12 || tra.Type == 13 || tra.Type == 14) {
 		for (size_t i = 0; i < NUM_station + NUM_final_station; i++)
 		{
-			if (tra.direction == 1.0)			//írë‹ÅÀèaíJ
+			if (tra.direction == 1)			//írë‹ÅÀèaíJ
 			{
 				if (sta[i].Xs <= tra.x && sta[i + 1].Xs >= tra.x)
 				{
 					tra.X_nextstop = sta[i + 1].Xs;
+					itr = i;
 					break;
 				}
 			}
@@ -702,12 +696,13 @@ void SimulateEngine::Run_pattern(TRAIN& tra, const STATION* sta, double t, std::
 				if (sta[i].Xs <= tra.x && sta[i + 1].Xs >= tra.x)
 				{
 					tra.X_nextstop = sta[i].Xs;
+					itr = i;
 					break;
 				}
 			}
 		}
 
-		decide_final_station(tra, i);
+		decide_final_station(tra, itr);
 
 	}
 
@@ -764,72 +759,138 @@ void SimulateEngine::Run_pattern(TRAIN& tra, const STATION* sta, double t, std::
 		{
 			tra.accelflag = 4;
 		}
-		else if (tra.direction == 1) {	//ì‡âÒÇËÅiírë‹Å®èaíJÅj
-			if (sta[2].Xs - 200.0 <= tra.x && tra.x < sta[2].Xs + 200.0) {	//ñ⁄îí
-				// if (tra.t_stop >= tra.T_delay + 2.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;Å@Å@î≠é‘éûçèÇê›íËÇ∑ÇÈèÍçá
-				// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				if (tra.Type == 0) {
-					if (tra.t_stop - tra.t_stop_old >= (stoptime + wait_time[0])) tra.accelflag = 1;
-				}
-
-			}
-			else if (sta[3].Xs - 200.0 <= tra.x && tra.x < sta[3].Xs + 200.0) {	//çÇìcînèÍ
-				// if (tra.t_stop >= tra.T_delay + 4.0 * 60.0 + 20 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				if (tra.Type == 0) {
-					if (tra.t_stop - tra.t_stop_old >= (stoptime - wait_time[0] + wait_time[1])) tra.accelflag = 1;
-				}
-
-			}
-			else if (sta[4].Xs - 200.0 <= tra.x && tra.x < sta[4].Xs + 200.0) {	//êVëÂãvï€
-				// if (tra.t_stop >= tra.T_delay + 6.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				if (tra.Type == 0) {
-					if (tra.t_stop - tra.t_stop_old >= (stoptime - wait_time[1] + wait_time[2])) tra.accelflag = 1;
-				}
-
-			}
-			else if (sta[5].Xs - 200.0 <= tra.x && tra.x < sta[5].Xs + 200.0) {	//êVèh
-				// if (tra.t_stop >= tra.T_delay + 9.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				if (tra.Type == 0) {
-					if (tra.t_stop >= tra.T_delay + 9.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				}
-
-			}
-			else if (sta[6].Xs - 200.0 <= tra.x && tra.x < sta[6].Xs + 200.0) {	//ë„ÅXñÿ
-				// if (tra.t_stop >= tra.T_delay + 10.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				if (tra.Type == 0) {
-					if (tra.t_stop - tra.t_stop_old >= (stoptime + wait_time[3])) tra.accelflag = 1;
-				}
-
-			}
-			else if (sta[7].Xs - 200.0 <= tra.x && tra.x < sta[7].Xs + 200.0) {	//å¥èh
-				// if (tra.t_stop >= tra.T_delay + 13.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1; 
-				// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
-				if (tra.Type == 0) {
-					if (tra.t_stop - tra.t_stop_old >= (stoptime - wait_time[3] + wait_time[4])) tra.accelflag = 1;
-				}
-
-			}
-			else if (sta[8].Xs - 200.0 <= tra.x && tra.x < sta[8].Xs + 200.0) {	//èaíJ
-				if ((tra.t_stop - tra.t_stop_old) >= 7200.0) tra.accelflag = 1;
-			}
-			else {
-				if ((tra.t_stop - tra.t_stop_old) >= 20.0) tra.accelflag = 1;
-			}
-		}
-
-
 		else
 		{
-			tra.accelflag = 4;
+			if (tra.direction == 1) {	//ì‡âÒÇËÅiírë‹Å®èaíJÅj
+				if (sta[2].Xs - 200.0 <= tra.x && tra.x < sta[2].Xs + 200.0) {	//ñ⁄îí
+					// if (tra.t_stop >= tra.T_delay + 2.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;Å@Å@î≠é‘éûçèÇê›íËÇ∑ÇÈèÍçá
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 0) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime + WaitTimeIN[0])) tra.accelflag = 1;
+					}
+
+				}
+				else if (sta[3].Xs - 200.0 <= tra.x && tra.x < sta[3].Xs + 200.0) {	//çÇìcînèÍ
+					// if (tra.t_stop >= tra.T_delay + 4.0 * 60.0 + 20 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 0) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime - WaitTimeIN[0] + WaitTimeIN[1])) tra.accelflag = 1;
+					}
+				}
+				else if (sta[4].Xs - 200.0 <= tra.x && tra.x < sta[4].Xs + 200.0) {	//êVëÂãvï€
+					// if (tra.t_stop >= tra.T_delay + 6.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 0) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime - WaitTimeIN[1] + WaitTimeIN[2])) tra.accelflag = 1;
+					}
+				}
+				else if (sta[5].Xs - 200.0 <= tra.x && tra.x < sta[5].Xs + 200.0) {	//êVèh
+					// if (tra.t_stop >= tra.T_delay + 9.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 0) {
+						if (tra.t_stop >= tra.T_delay + 9.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					}
+				}
+				else if (sta[6].Xs - 200.0 <= tra.x && tra.x < sta[6].Xs + 200.0) {	//ë„ÅXñÿ
+					// if (tra.t_stop >= tra.T_delay + 10.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 0) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime + WaitTimeIN[3])) tra.accelflag = 1;
+					}
+				}
+				else if (sta[7].Xs - 200.0 <= tra.x && tra.x < sta[7].Xs + 200.0) {	//å¥èh
+					// if (tra.t_stop >= tra.T_delay + 13.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1; 
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 0) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime - WaitTimeIN[3] + WaitTimeIN[4])) tra.accelflag = 1;
+					}
+				}
+				else if (sta[8].Xs - 200.0 <= tra.x && tra.x < sta[8].Xs + 200.0) {	//èaíJ
+					if ((tra.t_stop - tra.t_stop_old) >= 7200.0) tra.accelflag = 1;
+				}
+				else {
+					if ((tra.t_stop - tra.t_stop_old) >= 20.0) tra.accelflag = 1;
+				}
+			}
+			else if (tra.direction == -1) { //äOâÒÇËÅièaíJÅ®írë‹Åj
+				if (sta[1].Xs - 200.0 <= tra.x && tra.x < sta[1].Xs + 200.0) {	//írë‹
+					if ((tra.t_stop - tra.t_stop_old) >= 7200.0) tra.accelflag = 1;
+				}
+				else if (sta[2].Xs - 200.0 <= tra.x && tra.x < sta[2].Xs + 200.0) {	//ñ⁄îí
+					// if (tra.t_stop >= tra.T_delay + 13.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 9) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime + 0)) tra.accelflag = 1;
+					}
+					else {
+						if (tra.t_stop - tra.t_stop_old >= stoptime - WaitTimeOUT[3] + WaitTimeOUT[4]) tra.accelflag = 1;
+					}
+
+				}
+				else if (sta[3].Xs - 200.0 <= tra.x && tra.x < sta[3].Xs + 200.0) {	//çÇìcînèÍ
+					// if (tra.t_stop >= tra.T_delay + 11.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 9) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime + 0)) tra.accelflag = 1;
+					}
+					else {
+						if (tra.t_stop - tra.t_stop_old >= stoptime - WaitTimeOUT[2] + WaitTimeOUT[3]) tra.accelflag = 1;
+					}
+				}
+				else if (sta[4].Xs - 200.0 <= tra.x && tra.x < sta[4].Xs + 200.0) {	//êVëÂãvï€
+					// if (tra.t_stop >= tra.T_delay + 9.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 9) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime - 0)) tra.accelflag = 1;
+					}
+					if (tra.Type == 10) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime + 0)) tra.accelflag = 1;
+					}
+					else {
+						if (tra.t_stop - tra.t_stop_old >= stoptime + WaitTimeOUT[2]) tra.accelflag = 1;
+					}
+				}
+				else if (sta[5].Xs - 200.0 <= tra.x && tra.x < sta[5].Xs + 200.0) {	//êVèh
+					// if (tra.t_stop >= tra.T_delay + 7.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 10) {
+						if (tra.t_stop >= tra.T_delay + 7.0 * 60.0) tra.accelflag = 1;
+					}
+					else {
+						if (tra.t_stop >= tra.T_delay + 7.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					}
+				}
+				else if (sta[6].Xs - 200.0 <= tra.x && tra.x < sta[6].Xs + 200.0) {	//ë„ÅXñÿ
+					// if (tra.t_stop >= tra.T_delay + 4.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 10) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime - 0)) tra.accelflag = 1;
+					}
+					else if (tra.Type == 14) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime - 0)) tra.accelflag = 1;
+					}
+					else {
+						if (tra.t_stop - tra.t_stop_old >= stoptime - WaitTimeOUT[0] + WaitTimeOUT[1]) tra.accelflag = 1;
+					}
+				}
+				else if (sta[7].Xs - 200.0 <= tra.x && tra.x < sta[7].Xs + 200.0) {	//å¥èh
+					// if (tra.t_stop >= tra.T_delay + 2.0 * 60.0 && tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					// if (tra.t_stop - tra.t_stop_old >= stoptime) tra.accelflag = 1;
+					if (tra.Type == 14) {
+						if (tra.t_stop - tra.t_stop_old >= (stoptime + 0)) tra.accelflag = 1;
+					}
+					else {
+						if (tra.t_stop - tra.t_stop_old >= stoptime + WaitTimeOUT[0]) tra.accelflag = 1;
+					}
+				}
+				else {
+					if ((tra.t_stop - tra.t_stop_old) >= 20.0) tra.accelflag = 1;
+				}
+			}
 		}
 
 	}
 	else if (tra.accelflag == 2)		/*ëƒçsíÜÇÃìÆçÏÇåàíË*/
 	{
-		if (tra.direction == 1.0)		//ëÂã{ÅÀêÅè„ï˚ñ 
+		if (tra.direction == 1)		//ëÂã{ÅÀêÅè„ï˚ñ 
 		{
 			if (tra.x + tra.v * tra.v / 2.0 / tra.Bref < tra.X_nextstop)
 			{
@@ -852,7 +913,6 @@ void SimulateEngine::Run_pattern(TRAIN& tra, const STATION* sta, double t, std::
 			{
 				tra.accelflag = 2;
 			}
-
 			/*else if(tra.v_c < 60.0)
 			{
 				tra.accelflag = 1;
@@ -867,7 +927,7 @@ void SimulateEngine::Run_pattern(TRAIN& tra, const STATION* sta, double t, std::
 	}
 	else		/*â¡ë¨íÜorå∏ë¨íÜÇÃìÆçÏÇåàíË*/
 	{
-		if (tra.direction == 1.0)								//ëÂã{ÅÀêÅè„ï˚ñ 
+		if (tra.direction == 1)								//ëÂã{ÅÀêÅè„ï˚ñ 
 		{
 			if (tra.brakeflag == 1)		/*å∏ë¨íÜÇÃìÆçÏ*/
 			{
@@ -1354,7 +1414,7 @@ void SimulateEngine::Calculation_power_sub(SUB& sub)
 
 void SimulateEngine::Calculation_energy_sub(SUB& sub)
 {
-	if (t >= 15.0 * 60.0 && t < 45.0 * 60.0) {
+	if (timer >= 15.0 * 60.0 && timer < 45.0 * 60.0) {
 		sub.Ess += sub.Pss * dt;						//[J]
 		sub.Ess_c = sub.Ess / 1000.0 / 3600.0;		//[kWh]
 		if (sub.diode == 1)
@@ -1390,7 +1450,6 @@ void SimulateEngine::sort_s(const std::unique_ptr<NODE[]>& data, int n)
 
 	return;
 }
-
 
 /*** îzóÒdata[]ÇÃêÊì™nå¬ÇÃóvëfÇãóó£ÇÃè∏èáÇ…É\Å[Ég ***/
 void SimulateEngine::sort(const std::unique_ptr<NODE[]>& data, int n)
@@ -1643,7 +1702,7 @@ void SimulateEngine::Transpose(const std::unique_ptr<double[]>& trans, const std
 	}
 }
 
-int SimulateEngine::mySimulate(std::vector<double> wait_time, CsvWriter& _cw, std::mutex& _mtx)
+int SimulateEngine::mySimulate(std::vector<double> WaitTimeIN, std::vector<double> WaitTimeOUT, CsvWriter& _cw, std::mutex& _mtx)
 {
 	//Init();
 
@@ -1669,7 +1728,7 @@ int SimulateEngine::mySimulate(std::vector<double> wait_time, CsvWriter& _cw, st
 	count_loop = 0;
 	count_loop_rec = 0;
 
-	t = 0.0;
+	timer = 0.0;
 
 	sub_total = 0.0;
 
@@ -1689,9 +1748,9 @@ int SimulateEngine::mySimulate(std::vector<double> wait_time, CsvWriter& _cw, st
 	}
 
 	////////////////////////// êîílåvéZïî /////////////////////////
-	for (t = 0.0; t <= 60.0 * 45.0; t += dt)	/***** 1éûä‘ÉVÉ~ÉÖÉåÅ[ÉVÉáÉì *****/
+	for (timer = 0.0; timer <= 60.0 * 45.0; timer += dt)	/***** 1éûä‘ÉVÉ~ÉÖÉåÅ[ÉVÉáÉì *****/
 	{
-		minute = t / 60.0;
+		minute = timer / 60.0;
 		count_loop_rec = 0;
 
 		////////////////////////// é‘óºâ^ìÆï˚íˆéÆåvéZïî /////////////////////
@@ -1702,20 +1761,20 @@ int SimulateEngine::mySimulate(std::vector<double> wait_time, CsvWriter& _cw, st
 		{
 			Calculate_BEmax(tra[i]);
 
-			Run_pattern(tra[i], sta, t, wait_time);
+			Run_pattern(tra[i], sta, timer, WaitTimeIN, WaitTimeOUT);
 
 		}
 
 		/////////////////////////////////////////////////////////////////////
 
-		while (count_loop <= 3000002)
+		while (count_loop <= 300002)
 		{
 			// start_while:				//É_ÉCÉIÅ[ÉhîªíËÇ™ä‘à·Ç¡ÇƒÇ¢ÇΩèÍçáÅCcontinueÇ≈Ç±Ç±Ç…ñﬂÇ¡ÇƒÇ≠ÇÈ
 
-			if (count_loop > 3000000)
+			if (count_loop > 300000)
 			{
 				printf("\n");
-				printf("-----------t = %f--------------\n", t);
+				printf("-----------timer = %f--------------\n", timer);
 				printf("-----------accelflag & position vehicle--------------\n");
 				for (size_t i = 0; i < NUM_tra; i++)
 				{
@@ -1750,7 +1809,7 @@ int SimulateEngine::mySimulate(std::vector<double> wait_time, CsvWriter& _cw, st
 				printf("\n");
 			}
 
-			if (count_loop > 3000001) {
+			if (count_loop > 300001) {
 				printf("Holy shit!!\n");
 				exit(EXIT_FAILURE);
 				break;
@@ -2011,11 +2070,14 @@ int SimulateEngine::mySimulate(std::vector<double> wait_time, CsvWriter& _cw, st
 		sub_total += sub[i].Ess_c;
 	}
 
-	//fprintf(file, "%.1f, %f, %f, %f, %f, %f\n", wait_time[0], wait_time[1], wait_time[2], wait_time[3], wait_time[4], sub_total);
+	//fprintf(file, "%.1f, %f, %f, %f, %f, %f\n", WaitTimeIN[0], WaitTimeIN[1], WaitTimeIN[2], WaitTimeIN[3], WaitTimeIN[4], sub_total);
 
 	std::string wl = "";
-	for (size_t i = 0; i < wait_time.size(); i++) {
-		wl += std::to_string(wait_time.at(i)) + ",";
+	for (auto&& wts : WaitTimeIN) {
+		wl += std::to_string(wts) + ",";
+	}
+	for (auto&& wts : WaitTimeOUT) {
+		wl += std::to_string(wts) + ",";
 	}
 
 	wl += std::to_string(sub_total) + ",";
@@ -2039,7 +2101,7 @@ int SimulateEngine::mySimulate(std::vector<double> wait_time, CsvWriter& _cw, st
 
 	//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	int sleeper = 0;
-	while (sleeper < 10000000)sleeper++;
+	while (sleeper < 100000)sleeper++;
 
 
 	return  0;
@@ -2053,14 +2115,14 @@ SimulateEngine::~SimulateEngine()
 	//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
 	int sleeper = 0;
-	while (sleeper < 10000000)sleeper++;
+	while (sleeper < 100000)sleeper++;
 
 }
 
-bool ExeSimulate(SimulateEngine& SE, std::vector<double> _wt, CsvWriter& _cw, std::mutex& _mtx)
+bool ExeSimulate(SimulateEngine& SE, std::vector<double> _wtIN, std::vector<double> _wtOUT, CsvWriter& _cw, std::mutex& _mtx)
 {
 
-	SE.mySimulate(_wt, std::ref(_cw), std::ref(_mtx));
+	SE.mySimulate(_wtIN, _wtOUT, std::ref(_cw), std::ref(_mtx));
 
 
 	return true;

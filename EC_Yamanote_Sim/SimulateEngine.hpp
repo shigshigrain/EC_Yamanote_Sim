@@ -61,7 +61,7 @@ private:
 	std::unique_ptr<BRANCH[]> branch; // = std::make_unique<BRANCH[]>(N_branch);
 	//std::unique_ptr<ESD[]> esd; // = std::make_unique<ESD[]>(NUM_esd);
 
-	double t;
+	double timer;
 	double minute;
 
 	double sub_total;
@@ -89,8 +89,8 @@ private:
 	void Solve_next_state(TRAIN& tra);
 	void Calculate_BEmax(TRAIN& tra);
 	void change_direction(TRAIN& tra);
-	void decide_final_station(TRAIN& tra, int i);
-	void Run_pattern(TRAIN& tra, const STATION* sta, double t, std::vector<double> wait_time);
+	void decide_final_station(TRAIN& tra, size_t i);
+	void Run_pattern(TRAIN& tra, const STATION* sta, double t, std::vector<double>& WaitTimeIN, std::vector<double>& WaitTimeOUT);
 	void Calculation_traction_force_brake_force(TRAIN& tra);
 	void Calculation_traction_circuit(TRAIN& tra);
 	void Calculation_power_motor(TRAIN& tra);
@@ -109,7 +109,7 @@ private:
 	void Make_In_vector(const std::unique_ptr<NODE[]>& data, const std::unique_ptr<double[]>& In);
 	void Transpose(const std::unique_ptr<double[]>& trans, const std::unique_ptr<double[]>& X, size_t row, size_t column);
 public:
-	int mySimulate(std::vector<double> wait_time, CsvWriter& _cw, std::mutex& _mtx);
+	int mySimulate(std::vector<double> WaitTimeIN, std::vector<double> WaitTimeOUT, CsvWriter& _cw, std::mutex& _mtx);
 
 	~SimulateEngine();
 
@@ -117,4 +117,4 @@ public:
 
 // îÒìØä˙èàóùópîÒÉÅÉìÉoä÷êî
 
-bool ExeSimulate(SimulateEngine& SE, std::vector<double> _wt, CsvWriter& _cw, std::mutex& _mtx);
+bool ExeSimulate(SimulateEngine& SE, std::vector<double> _wtIN, std::vector<double> _wtOUT, CsvWriter& _cw, std::mutex& _mtx);

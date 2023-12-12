@@ -45,7 +45,7 @@ bool CsvWriter::StandUp(std::string header)
 {
 	FileNameH = header;
 
-	std::string file_name("Result\\" + FileNameH +"2列車_消費電力_山手線_5駅5パターン_" + getTimeStamp() + ".csv");
+	std::string file_name("Result\\" + FileNameH +"内1外1列車_消費電力_5駅4パターン_" + getTimeStamp() + ".csv");
 
 	try
 	{
