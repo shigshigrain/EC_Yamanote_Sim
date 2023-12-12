@@ -2092,7 +2092,7 @@ const STATION sta[] = {	//下り各駅
 //}
 //
 ///*** xおよびyが指す要素を交換 ***/
-//void sort_s(const std::unique_ptr<NODE[]>& data, int n)
+//void Sort_s(const std::unique_ptr<NODE[]>& data, int n)
 //{
 //
 //	std::vector<NODE> temp(N_node);
@@ -3121,7 +3121,7 @@ const STATION sta[] = {	//下り各駅
 //				Initialize_matrix1(Vb, N_branch, 1);
 //
 //				/***  node_order[]を距離順にソート  ***/
-//				//sort_s(node_order, N_node);
+//				//Sort_s(node_order, N_node);
 //				sort(node_order, N_node);
 //
 //				Make_branch(branch, node_order, tra);

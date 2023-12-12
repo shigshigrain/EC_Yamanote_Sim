@@ -1426,7 +1426,7 @@ void SimulateEngine::Calculation_energy_sub(SUB& sub)
 }
 
 /*** xおよびyが指す要素を交換 ***/
-void SimulateEngine::sort_s(const std::unique_ptr<NODE[]>& data, int n)
+void SimulateEngine::Sort_s(const std::unique_ptr<NODE[]>& data, int n)
 {
 
 	std::vector<NODE> temp(N_node);
@@ -1452,7 +1452,7 @@ void SimulateEngine::sort_s(const std::unique_ptr<NODE[]>& data, int n)
 }
 
 /*** 配列data[]の先頭n個の要素を距離の昇順にソート ***/
-void SimulateEngine::sort(const std::unique_ptr<NODE[]>& data, int n)
+void SimulateEngine::Sort_m(const std::unique_ptr<NODE[]>& data, int n)
 {
 	int k = n - 1;
 	while (k >= 0)
@@ -1846,8 +1846,8 @@ int SimulateEngine::mySimulate(std::vector<double> WaitTimeIN, std::vector<doubl
 			Initialize_matrix1(Vb, N_branch, 1);
 
 			/***  node_order[]を距離順にソート  ***/
-			//sort_s(node_order, N_node);
-			sort(node_order, N_node);
+			//Sort_s(node_order, N_node);
+			Sort_s(node_order, N_node);
 
 			Make_branch(branch, node_order, tra);
 

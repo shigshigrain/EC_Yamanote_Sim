@@ -98,8 +98,8 @@ private:
 	void Calculation_energy_train(TRAIN& tra);
 	void Calculation_power_sub(SUB& sub);
 	void Calculation_energy_sub(SUB& sub);
-	void sort_s(const std::unique_ptr<NODE[]>& data, int n);
-	void sort(const std::unique_ptr<NODE[]>& data, int n);
+	void Sort_s(const std::unique_ptr<NODE[]>& data, int n);
+	void Sort_m(const std::unique_ptr<NODE[]>& data, int n);
 	void Initialize_BRANCH(BRANCH& branch);
 	int Count_Trains_Direction(const std::unique_ptr<TRAIN[]>& tra, int direction);
 	void Make_branch(const std::unique_ptr<BRANCH[]>& branch, const std::unique_ptr<NODE[]>& temp, const std::unique_ptr<TRAIN[]>& tra);
