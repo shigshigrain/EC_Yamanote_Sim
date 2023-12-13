@@ -1751,6 +1751,7 @@ int SimulateEngine::mySimulate(std::vector<double> WaitTimeIN, std::vector<doubl
 	for (timer = 0.0; timer <= 60.0 * 45.0; timer += dt)	/***** 1時間シミュレーション *****/
 	{
 		minute = timer / 60.0;
+		count_loop = 0;
 		count_loop_rec = 0;
 
 		////////////////////////// 車両運動方程式計算部 /////////////////////
@@ -2116,6 +2117,7 @@ SimulateEngine::~SimulateEngine()
 
 	int sleeper = 0;
 	while (sleeper < 100000)sleeper++;
+
 
 }
 

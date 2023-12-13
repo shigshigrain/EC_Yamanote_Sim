@@ -17,7 +17,7 @@
 const std::vector<std::vector<double>> ShiftWait5 = {
 
 	{-5.0, -2.5, 0.0, 2.5 , 5.0}, // ‰w1‚Å‚Ì’²®ŠÔˆê——^
-	{-5.0, -2.5, 0.0, 2.5 , 5.0}, // ‰w2‚Å‚Ì’²®ŠÔˆê——^
+	{-5.0, -2.5, 0.0, 2.5 , 5.0}, // ‰w2^
 	{-5.0, -2.5, 0.0, 2.5 , 5.0}, // ‰w3^
 	{-5.0, -2.5, 0.0, 2.5 , 5.0}, // ‰w4^
 	{-5.0, -2.5, 0.0, 2.5 , 5.0}, // ‰w5^
@@ -26,20 +26,20 @@ const std::vector<std::vector<double>> ShiftWait5 = {
 
 const std::vector<std::vector<double>> ShiftWaitIN = {
 
-	{-5.0, -4.0, 0.0, 5.0}, // –Ú”’^
-	{-5.0, -4.0, 0.0, 5.0}, // ‚“c”nê^
-	{-5.0, -4.0, 0.0, 5.0}, // V‘å‹v•Û^
-	{-5.0, -4.0, 0.0, 5.0}, // ‘ãX–Ø^
-	{-5.0, -4.0, 0.0, 5.0}, // Œ´h^
+	{-5.0, -4.0, 0.0}, // –Ú”’^
+	{-5.0, -4.0, 0.0}, // ‚“c”nê^
+	{-5.0, -4.0, 0.0}, // V‘å‹v•Û^
+	{-5.0, -4.0, 0.0}, // ‘ãX–Ø^
+	{-5.0, -4.0, 0.0}, // Œ´h^
 };
 
 const std::vector<std::vector<double>> ShiftWaitOUT = {
 
-	{-5.0, -4.0, 0.0, 5.0}, // Œ´h^
-	{-5.0, -4.0, 0.0, 5.0}, // ‘ãX–Ø^
-	{-5.0, -4.0, 0.0, 5.0}, // V‘å‹v•Û^
-	{-5.0, -4.0, 0.0, 5.0}, // ‚“c”nê^
-	{-5.0, -4.0, 0.0, 5.0}, // –Ú”’^
+	{-5.0, -4.0, 0.0}, // Œ´h^
+	{-5.0, -4.0, 0.0}, // ‘ãX–Ø^
+	{-5.0, -4.0, 0.0}, // V‘å‹v•Û^
+	{-5.0, -4.0, 0.0}, // ‚“c”nê^
+	{-5.0, -4.0, 0.0}, // –Ú”’^
 };
 
 // ’†g‚Í
@@ -94,7 +94,7 @@ static void make_que_wait(std::deque<std::vector<double>>& wq, const std::vector
 
 }
 
-constexpr size_t NumThread = 2; // 
+constexpr size_t NumThread = 1; // 
 
 static void simulate() {
 	
@@ -150,12 +150,12 @@ static void simulate() {
 
 			std::cout << "Finish " << counter << " Thread\n";
 
-			if (j >= 4Ui64)break;
+			//if (j >= 256Ui64)break;
 
 			
 		}
 
-		if (i >= 4Ui64)break;
+		//if (i >= 256Ui64)break;
 
 
 	}
@@ -192,8 +192,8 @@ static void simulate() {
 
 	CW.~CsvWriter();
 
-	std::string waiter;
-	std::cin >> waiter;
+	//std::string waiter;
+	//std::cin >> waiter;
 
 	return;
 
@@ -206,8 +206,8 @@ int main(void) {
 
 	std::cout << "\n Finish Simulating\n Type to End\n";
 
-	std::string waiter;
-	std::cin >> waiter;
+	//std::string waiter;
+	//std::cin >> waiter;
 
 	return 0;
 
