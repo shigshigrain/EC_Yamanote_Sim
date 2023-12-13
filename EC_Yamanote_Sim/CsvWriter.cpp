@@ -88,7 +88,7 @@ bool CsvWriter::Writing(std::mutex& _mtx)
 CsvWriter::~CsvWriter()
 {
 
-	fp7.close();
+	//fp7.close();
 
 
 }

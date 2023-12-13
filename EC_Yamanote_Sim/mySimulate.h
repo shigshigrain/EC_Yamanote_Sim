@@ -750,7 +750,7 @@ const std::vector<INI_SUB> ini_sub = {
 };
 
 /***  ‰w‚Ì\‘¢‘Ì”z—ñéŒ¾•” (V•S‡ƒ–‹u‰wŠî€) ***/
-const STATION sta[] = {	//‰º‚èŠe‰w
+const std::vector<STATION> sta = {	//‰º‚èŠe‰w
 	{"basement1",	-100.0},			//‰w–¼, ‰wˆÊ’u	0
 	{"Ikebukuro",  	0.0},				//‰w–¼, ‰wˆÊ’u	1
 	{"Mejiro",	    1200.0},	    	//‰w–¼, ‰wˆÊ’u	2

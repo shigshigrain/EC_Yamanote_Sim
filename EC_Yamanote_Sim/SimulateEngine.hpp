@@ -90,7 +90,7 @@ private:
 	void Calculate_BEmax(TRAIN& tra);
 	void change_direction(TRAIN& tra);
 	void decide_final_station(TRAIN& tra, size_t i);
-	void Run_pattern(TRAIN& tra, const STATION* sta, double t, std::vector<double>& WaitTimeIN, std::vector<double>& WaitTimeOUT);
+	void Run_pattern(TRAIN& tra, const std::vector<STATION>& sta, double t, std::vector<double>& WaitTimeIN, std::vector<double>& WaitTimeOUT);
 	void Calculation_traction_force_brake_force(TRAIN& tra);
 	void Calculation_traction_circuit(TRAIN& tra);
 	void Calculation_power_motor(TRAIN& tra);

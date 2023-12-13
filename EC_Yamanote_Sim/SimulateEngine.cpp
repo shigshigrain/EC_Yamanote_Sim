@@ -671,7 +671,7 @@ void SimulateEngine::decide_final_station(TRAIN& tra, size_t i)
 }
 
 //ここを変えたいby Kasai1012
-void SimulateEngine::Run_pattern(TRAIN& tra, const STATION* sta, double t, std::vector<double>& WaitTimeIN, std::vector<double>& WaitTimeOUT)
+void SimulateEngine::Run_pattern(TRAIN& tra, const std::vector<STATION>& sta, double t, std::vector<double>& WaitTimeIN, std::vector<double>& WaitTimeOUT)
 {
 	size_t itr = 0;
 
@@ -1748,15 +1748,15 @@ int SimulateEngine::mySimulate(std::vector<double> WaitTimeIN, std::vector<doubl
 	}
 
 	////////////////////////// 数値計算部 /////////////////////////
-	for (timer = 0.0; timer <= 60.0 * 45.0; timer += dt)	/***** 1時間シミュレーション *****/
+	for (timer = 1000.0; timer <= 60.0 * 45.0; timer += dt)	/***** 1時間シミュレーション *****/
 	{
 		minute = timer / 60.0;
 		count_loop = 0;
 		count_loop_rec = 0;
 
 		////////////////////////// 車両運動方程式計算部 /////////////////////
-			/*** 車両走行パターン模擬 & 運動方程式計算 ***/
-			/*** 車両パワー計算 ***/
+			//** 車両走行パターン模擬 & 運動方程式計算 ***/
+			//** 車両パワー計算 ***/
 
 		for (size_t i = 0; i < NUM_tra; i++)
 		{
@@ -1767,264 +1767,268 @@ int SimulateEngine::mySimulate(std::vector<double> WaitTimeIN, std::vector<doubl
 		}
 
 		/////////////////////////////////////////////////////////////////////
-
-		while (count_loop <= 300002)
 		{
-			// start_while:				//ダイオード判定が間違っていた場合，continueでここに戻ってくる
-
-			if (count_loop > 300000)
+			std::lock_guard<std::mutex> lock(_mtx);
+			while (count_loop <= 300002)
 			{
-				printf("\n");
-				printf("-----------timer = %f--------------\n", timer);
-				printf("-----------accelflag & position vehicle--------------\n");
-				for (size_t i = 0; i < NUM_tra; i++)
+				// start_while:				//ダイオード判定が間違っていた場合，continueでここに戻ってくる
+
+				if (count_loop > 300000)
 				{
-					printf("%d, %f\n", tra[i].accelflag, tra[i].x);
-				}
-				/*				printf("-----------Fmot vehicle--------------\n");
-								for (size_t i = 0; i < NUM_tra; i++)
-								{
-									printf("%f\n", tra[i].Fmot);
-								}*/
-				printf("-----------Pmot vehicle--------------\n");
-				for (size_t i = 0; i < NUM_tra; i++)
-				{
-					printf("%f\n", tra[i].Pmot);
-				}
-				printf("-----------Vp vehicle--------------\n");
-				for (size_t i = 0; i < NUM_tra; i++)
-				{
-					printf("%f\n", tra[i].vp);
-				}
-				printf("-----------Vfc vehicle--------------\n");
-				for (size_t i = 0; i < NUM_tra; i++)
-				{
-					printf("%f\n", tra[i].vfc);
-				}
-				printf("-----------ifl vehicle--------------\n");
-				for (size_t i = 0; i < NUM_tra; i++)
-				{
-					printf("%f\n", tra[i].ifl);
-				}
-
-				printf("\n");
-			}
-
-			if (count_loop > 300001) {
-				printf("Holy shit!!\n");
-				exit(EXIT_FAILURE);
-				break;
-			}
-
-			/***  node[]の初期化  ***/
-			for (size_t i = 0; i < NUM_sub; i++)
-			{
-				Make_NODE_SS(node[i], sub[i]);
-				Make_NODE_SS(node_order[i], sub[i]);
-			}
-
-			for (size_t i = 0; i < NUM_tra; i++)
-			{
-				Make_NODE_TRAIN(node[i + NUM_sub], tra[i]);
-				Make_NODE_TRAIN(node_order[i + NUM_sub], tra[i]);
-			}
-
-			for (size_t i = 0; i < N_branch; i++)
-			{
-				Initialize_BRANCH(branch[i]);
-			}
-
-			/*** 各Matrixの初期化 ***/
-			Initialize_matrix1(H, N_node, N_branch);
-			Initialize_matrix1(H_tra, N_branch, N_node);
-			Initialize_matrix1(Y, N_branch, N_branch);
-			Initialize_matrix1(A, N_node, N_node);
-			Initialize_matrix1(TEMP, N_node, N_branch);
-			Initialize_matrix1(In, N_node, 1);
-			Initialize_matrix1(In_cpy, N_node, 1);
-			Initialize_matrix1(Vn, N_node, 1);
-			Initialize_matrix1(Ib, N_branch, 1);
-			Initialize_matrix1(Vb, N_branch, 1);
-
-			/***  node_order[]を距離順にソート  ***/
-			//Sort_s(node_order, N_node);
-			Sort_s(node_order, N_node);
-
-			Make_branch(branch, node_order, tra);
-
-			//H行列の生成(「回生車を含むき電システムの現状とあり方」p.19参照)
-			Make_H_matrix(branch, H);
-
-			//アドミタンス行列の生成
-			Make_Y_matrix(branch, Y);
-
-			//ノード電流行列の生成
-			Make_In_vector(node, In);
-			Make_In_vector(node, In_cpy);		//"dgetrs"では右辺ベクトルが方程式の解で上書きされてしまうので，計算用にInをコピーしたIn_cpyを作成
-
-			//H行列を転置する
-			Transpose(H_tra, H, N_node, N_branch);
-
-			//H行列×Y行列 (dgemmはintel MKLを用いて行列の掛け算を計算)
-			dgemm(&trans, &trans, &K_node, &K_branch, &K_branch, &alpha, H.get(), &ld_node, Y.get(), &ld_branch, &beta, TEMP.get(), &ld_node);
-
-			//上記行列×転置H行列 (dgemmはintel MKLを用いて行列の掛け算を計算)
-			dgemm(&trans, &trans, &K_node, &K_node, &K_branch, &alpha, TEMP.get(), &ld_node, H_tra.get(), &ld_branch, &beta, A.get(), &ld_node);
-
-			//連立1次方程式を解くためにH行列×Y行列×転置H行列の解A(N行N列)をLU分解
-			dgetrf(&ld_node, &K_branch, A.get(), &ld_node, ipiv_Vn.get(), &info_Vn);
-
-			//dgetrsで連立1次方程式「A*Vn=In」を解き，Inに解(ノード電圧行列)を上書き
-			dgetrs(&trans, &K_node, &nrhs, A.get(), &ld_node, ipiv_Vn.get(), In_cpy.get(), &ld_node, &info_Vn);	//In_cpyに方程式の解Vnが格納されていることに注意
-
-			Make_Y_matrix(branch, Y);		//なぜかVnを求める際の"dgetrf"でY-matrixが書き換えられているため，ここで再計算させてる（実際は無駄な計算なのでしたくないが…）
-
-			for (size_t i = 0; i < N_node; i++)	/*Vnベクトルはマイナスをつける*/
-			{
-				Vn[i] = -In_cpy[i];
-			}
-
-			//転置H行列×Vnベクトルでブランチ電圧ベクトルを計算
-			dgemv(&trans, &K_branch, &K_node, &alpha, H_tra.get(), &ld_branch, Vn.get(), &incx, &beta, Vb.get(), &incy);
-
-			//Y行列×ブランチ電圧ベクトルでブランチ電流ベクトルを計算
-			dgemv(&trans, &K_branch, &K_branch, &alpha, Y.get(), &ld_branch, Vb.get(), &incx, &beta, Ib.get(), &incy);
-
-
-			for (size_t i = 0; i < N_node; i++)			//ノード電圧の計算結果をノード構造体へ返す（結果的には，Vn配列はノード構造体の順番通りに並んでいる？）
-			{
-				node[i].V = Vn[i];
-			}
-
-			for (size_t i = 0; i < NUM_sub; i++)			//ノード電圧・電流とブランチ電流から，変電所出力電圧・電流を計算
-			{
-				sub[i].vout = node[i].V;
-				sub[i].iss = -In[i] + Ib[i];
-				Error_Detection_SS(sub[i]);
-				ERROR += sub[i].flag;
-			}
-
-			for (size_t i = 0; i < NUM_tra; i++)
-			{
-				tra[i].vfc_old = tra[i].vfc;
-
-				for (size_t j = 0; j < N_node; j++)
-				{
-					if (node[j].Number == tra[i].name_train)	//ノード番号と列車識別番号が一致していたらノード電圧を列車パンタ点電圧に返す
+					printf("\n");
+					printf("-----------timer = %f--------------\n", timer);
+					printf("-----------accelflag & position vehicle--------------\n");
+					for (size_t i = 0; i < NUM_tra; i++)
 					{
-						tra[i].vp = node[j].V;
-						tra[i].vfc = tra[i].vp - tra[i].Rfl * tra[i].ifl;
-
-						//引張力・ブレーキ力・モータ電流・モータ電圧を計算
-						Calculation_traction_force_brake_force(tra[i]);
-
-						//dq軸電流・電圧からモータパワーを計算
-						Calculation_power_motor(tra[i]);
-
-						//主回路計算
-						Calculation_traction_circuit(tra[i]);
+						printf("%d, %f\n", tra[i].accelflag, tra[i].x);
 					}
-				}
-			}
-
-			for (size_t i = 0; i < NUM_tra; i++)
-			{
-				tra[i].judgement = std::abs(tra[i].vfc - tra[i].vfc_old) / tra[i].vfc_old;
-
-				if (tra[i].judgement < 0.001) {
-					tra[i].reg_flag = 1;
-				}
-				else {
-					tra[i].reg_flag = 0;
-				}
-
-				if (tra[i].vfc > Vcmax) tra[i].reg_flag = 0;
-
-				ERROR_REG += tra[i].reg_flag;
-			}
-
-			/*		for (size_t i = 0; i < NUM_tra; i++)
+					/*				printf("-----------Fmot vehicle--------------\n");
+									for (size_t i = 0; i < NUM_tra; i++)
+									{
+										printf("%f\n", tra[i].Fmot);
+									}*/
+					printf("-----------Pmot vehicle--------------\n");
+					for (size_t i = 0; i < NUM_tra; i++)
 					{
-						if (tra[i].accelflag == 3 || (tra[i].accelflag == 5 && tra[i].v_c > tra[i].con_speed)) {
-							Error_Detection_REG(tra[i]);
-						}
-						else {
-							tra[i].reg_flag = 1;
-						}
+						printf("%f\n", tra[i].Pmot);
+					}
+					printf("-----------Vp vehicle--------------\n");
+					for (size_t i = 0; i < NUM_tra; i++)
+					{
+						printf("%f\n", tra[i].vp);
+					}
+					printf("-----------Vfc vehicle--------------\n");
+					for (size_t i = 0; i < NUM_tra; i++)
+					{
+						printf("%f\n", tra[i].vfc);
+					}
+					printf("-----------ifl vehicle--------------\n");
+					for (size_t i = 0; i < NUM_tra; i++)
+					{
+						printf("%f\n", tra[i].ifl);
+					}
 
-						ERROR_REG += tra[i].reg_flag;
-					}*/
-
-					/*		if (t > 1020.05 && t < 1020.09) {
-								printf("-----------t = %f--------------\n", t);
-								printf("-----------accelflag vehicle--------------\n");
-								for (size_t i = 0; i < NUM_tra; i++)
-								{
-									printf("%d\n", tra[i].accelflag);
-								}
-								printf("-----------Fmot vehicle--------------\n");
-								for (size_t i = 0; i < NUM_tra; i++)
-								{
-									printf("%f\n", tra[i].Fmot);
-								}
-								printf("-----------Pmot vehicle--------------\n");
-								for (size_t i = 0; i < NUM_tra; i++)
-								{
-									printf("%f\n", tra[i].Pmot);
-								}
-								printf("-----------Vp vehicle--------------\n");
-								for (size_t i = 0; i < NUM_tra; i++)
-								{
-									printf("%f\n", tra[i].vp);
-								}
-								printf("-----------ifl vehicle--------------\n");
-								for (size_t i = 0; i < NUM_tra; i++)
-								{
-									printf("%f\n", tra[i].ifl);
-								}
-								printf("-----------vss substation--------------\n");
-								for (size_t i = 0; i < NUM_sub; i++)
-								{
-									printf("%f\n", sub[i].vout);
-								}
-								printf("-----------iss substation--------------\n");
-								for (size_t i = 0; i < NUM_sub; i++)
-								{
-									printf("%f\n", sub[i].iss);
-								}
-								printf("\n");
-								printf("\n");
-								printf("\n");
-							}*/
-
-			if (ERROR < NUM_sub || ERROR_REG < NUM_tra)
-			{
-				/*for (size_t i = 0; i < N_node; i++)
-				{
-					free(node[i]);
-					free(node_order[i]);
+					printf("\n");
 				}
+
+				if (count_loop > 300001) {
+					printf("Holy shit!!\n");
+					exit(EXIT_FAILURE);
+					break;
+				}
+
+				/***  node[]の初期化  ***/
+				for (size_t i = 0; i < NUM_sub; i++)
+				{
+					Make_NODE_SS(node[i], sub[i]);
+					Make_NODE_SS(node_order[i], sub[i]);
+				}
+
+				for (size_t i = 0; i < NUM_tra; i++)
+				{
+					Make_NODE_TRAIN(node[i + NUM_sub], tra[i]);
+					Make_NODE_TRAIN(node_order[i + NUM_sub], tra[i]);
+				}
+
 				for (size_t i = 0; i < N_branch; i++)
 				{
-					free(branch[i]);
-				}*/
+					Initialize_BRANCH(branch[i]);
+				}
 
 
-				ERROR = 0;
-				ERROR_REG = 0;
-				count_loop++;
-				//goto start_while;					//while文の先頭に戻る
-				continue;
-			}
-			else
-			{
-				ERROR = 0;
-				ERROR_REG = 0;
-				count_loop_rec = count_loop;
-				count_loop = 0;
-				break;
+				/*** 各Matrixの初期化 ***/
+				Initialize_matrix1(H, N_node, N_branch);
+				Initialize_matrix1(H_tra, N_branch, N_node);
+				Initialize_matrix1(Y, N_branch, N_branch);
+				Initialize_matrix1(A, N_node, N_node);
+				Initialize_matrix1(TEMP, N_node, N_branch);
+				Initialize_matrix1(In, N_node, 1);
+				Initialize_matrix1(In_cpy, N_node, 1);
+				Initialize_matrix1(Vn, N_node, 1);
+				Initialize_matrix1(Ib, N_branch, 1);
+				Initialize_matrix1(Vb, N_branch, 1);
+
+				/***  node_order[]を距離順にソート  ***/
+				//Sort_s(node_order, N_node);
+				Sort_s(node_order, N_node);
+
+				Make_branch(branch, node_order, tra);
+
+				//H行列の生成(「回生車を含むき電システムの現状とあり方」p.19参照)
+				Make_H_matrix(branch, H);
+
+				//アドミタンス行列の生成
+				Make_Y_matrix(branch, Y);
+
+				//ノード電流行列の生成
+				Make_In_vector(node, In);
+				Make_In_vector(node, In_cpy);		//"dgetrs"では右辺ベクトルが方程式の解で上書きされてしまうので，計算用にInをコピーしたIn_cpyを作成
+
+				//H行列を転置する
+				Transpose(H_tra, H, N_node, N_branch);
+
+				//H行列×Y行列 (dgemmはintel MKLを用いて行列の掛け算を計算)
+				dgemm(&trans, &trans, &K_node, &K_branch, &K_branch, &alpha, H.get(), &ld_node, Y.get(), &ld_branch, &beta, TEMP.get(), &ld_node);
+
+				//上記行列×転置H行列 (dgemmはintel MKLを用いて行列の掛け算を計算)
+				dgemm(&trans, &trans, &K_node, &K_node, &K_branch, &alpha, TEMP.get(), &ld_node, H_tra.get(), &ld_branch, &beta, A.get(), &ld_node);
+
+				//連立1次方程式を解くためにH行列×Y行列×転置H行列の解A(N行N列)をLU分解
+				dgetrf(&ld_node, &K_branch, A.get(), &ld_node, ipiv_Vn.get(), &info_Vn);
+
+				//dgetrsで連立1次方程式「A*Vn=In」を解き，Inに解(ノード電圧行列)を上書き
+				dgetrs(&trans, &K_node, &nrhs, A.get(), &ld_node, ipiv_Vn.get(), In_cpy.get(), &ld_node, &info_Vn);	//In_cpyに方程式の解Vnが格納されていることに注意
+
+				Make_Y_matrix(branch, Y);		//なぜかVnを求める際の"dgetrf"でY-matrixが書き換えられているため，ここで再計算させてる（実際は無駄な計算なのでしたくないが…）
+
+				for (size_t i = 0; i < N_node; i++)	/*Vnベクトルはマイナスをつける*/
+				{
+					Vn[i] = -In_cpy[i];
+				}
+
+				//転置H行列×Vnベクトルでブランチ電圧ベクトルを計算
+				dgemv(&trans, &K_branch, &K_node, &alpha, H_tra.get(), &ld_branch, Vn.get(), &incx, &beta, Vb.get(), &incy);
+
+				//Y行列×ブランチ電圧ベクトルでブランチ電流ベクトルを計算
+				dgemv(&trans, &K_branch, &K_branch, &alpha, Y.get(), &ld_branch, Vb.get(), &incx, &beta, Ib.get(), &incy);
+
+
+				for (size_t i = 0; i < N_node; i++)			//ノード電圧の計算結果をノード構造体へ返す（結果的には，Vn配列はノード構造体の順番通りに並んでいる？）
+				{
+					node[i].V = Vn[i];
+				}
+
+				for (size_t i = 0; i < NUM_sub; i++)			//ノード電圧・電流とブランチ電流から，変電所出力電圧・電流を計算
+				{
+					sub[i].vout = node[i].V;
+					sub[i].iss = -In[i] + Ib[i];
+					Error_Detection_SS(sub[i]);
+					ERROR += sub[i].flag;
+				}
+
+				for (size_t i = 0; i < NUM_tra; i++)
+				{
+					tra[i].vfc_old = tra[i].vfc;
+
+					for (size_t j = 0; j < N_node; j++)
+					{
+						if (node[j].Number == tra[i].name_train)	//ノード番号と列車識別番号が一致していたらノード電圧を列車パンタ点電圧に返す
+						{
+							tra[i].vp = node[j].V;
+							tra[i].vfc = tra[i].vp - tra[i].Rfl * tra[i].ifl;
+
+							//引張力・ブレーキ力・モータ電流・モータ電圧を計算
+							Calculation_traction_force_brake_force(tra[i]);
+
+							//dq軸電流・電圧からモータパワーを計算
+							Calculation_power_motor(tra[i]);
+
+							//主回路計算
+							Calculation_traction_circuit(tra[i]);
+						}
+					}
+				}
+
+				for (size_t i = 0; i < NUM_tra; i++)
+				{
+					tra[i].judgement = std::abs(tra[i].vfc - tra[i].vfc_old) / tra[i].vfc_old;
+
+					if (tra[i].judgement < 0.001) {
+						tra[i].reg_flag = 1;
+					}
+					else {
+						tra[i].reg_flag = 0;
+					}
+
+					if (tra[i].vfc > Vcmax) tra[i].reg_flag = 0;
+
+					ERROR_REG += tra[i].reg_flag;
+				}
+
+				/*		for (size_t i = 0; i < NUM_tra; i++)
+						{
+							if (tra[i].accelflag == 3 || (tra[i].accelflag == 5 && tra[i].v_c > tra[i].con_speed)) {
+								Error_Detection_REG(tra[i]);
+							}
+							else {
+								tra[i].reg_flag = 1;
+							}
+
+							ERROR_REG += tra[i].reg_flag;
+						}*/
+
+						/*		if (t > 1020.05 && t < 1020.09) {
+									printf("-----------t = %f--------------\n", t);
+									printf("-----------accelflag vehicle--------------\n");
+									for (size_t i = 0; i < NUM_tra; i++)
+									{
+										printf("%d\n", tra[i].accelflag);
+									}
+									printf("-----------Fmot vehicle--------------\n");
+									for (size_t i = 0; i < NUM_tra; i++)
+									{
+										printf("%f\n", tra[i].Fmot);
+									}
+									printf("-----------Pmot vehicle--------------\n");
+									for (size_t i = 0; i < NUM_tra; i++)
+									{
+										printf("%f\n", tra[i].Pmot);
+									}
+									printf("-----------Vp vehicle--------------\n");
+									for (size_t i = 0; i < NUM_tra; i++)
+									{
+										printf("%f\n", tra[i].vp);
+									}
+									printf("-----------ifl vehicle--------------\n");
+									for (size_t i = 0; i < NUM_tra; i++)
+									{
+										printf("%f\n", tra[i].ifl);
+									}
+									printf("-----------vss substation--------------\n");
+									for (size_t i = 0; i < NUM_sub; i++)
+									{
+										printf("%f\n", sub[i].vout);
+									}
+									printf("-----------iss substation--------------\n");
+									for (size_t i = 0; i < NUM_sub; i++)
+									{
+										printf("%f\n", sub[i].iss);
+									}
+									printf("\n");
+									printf("\n");
+									printf("\n");
+								}*/
+
+				if (ERROR < NUM_sub || ERROR_REG < NUM_tra)
+				{
+					/*for (size_t i = 0; i < N_node; i++)
+					{
+						free(node[i]);
+						free(node_order[i]);
+					}
+					for (size_t i = 0; i < N_branch; i++)
+					{
+						free(branch[i]);
+					}*/
+
+
+					ERROR = 0;
+					ERROR_REG = 0;
+					count_loop++;
+					//goto start_while;					//while文の先頭に戻る
+					continue;
+				}
+				else
+				{
+					ERROR = 0;
+					ERROR_REG = 0;
+					count_loop_rec = count_loop;
+					count_loop = 0;
+					break;
+				}
 			}
 		}
+		/////////////////////////////////////////////////////////////////////
 
 		/***  次の状態を計算  ***/
 		for (size_t i = 0; i < NUM_tra; i++)
@@ -2101,23 +2105,16 @@ int SimulateEngine::mySimulate(std::vector<double> WaitTimeIN, std::vector<doubl
 	//std::unique_ptr<SUB[]> sub = std::make_unique<SUB[]>(NUM_sub);
 
 	//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-	int sleeper = 0;
-	while (sleeper < 100000)sleeper++;
+	/*int sleeper = 0;
+	while (sleeper < 100000)sleeper++;*/
 
 
 	return  0;
 
 }
 
-
 SimulateEngine::~SimulateEngine()
 {
-
-	//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-
-	int sleeper = 0;
-	while (sleeper < 100000)sleeper++;
-
 
 }
 

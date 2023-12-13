@@ -94,7 +94,7 @@ static void make_que_wait(std::deque<std::vector<double>>& wq, const std::vector
 
 }
 
-constexpr size_t NumThread = 1; // 
+constexpr size_t NumThread = 3; // 
 
 static void simulate() {
 	
@@ -150,13 +150,14 @@ static void simulate() {
 
 			std::cout << "Finish " << counter << " Thread\n";
 
-			//if (j >= 256Ui64)break;
+			//if (j >= 2Ui64)break;
 
 			
 		}
 
-		//if (i >= 256Ui64)break;
 
+		CW.Writing(mtx);
+		if (i >= 2Ui64)break;
 
 	}
 
@@ -187,13 +188,15 @@ static void simulate() {
 	//}
 
 
-	CW.Writing(mtx);
+	//CW.Writing(mtx);
 	std::cout << "Finish Writing \n";
 
-	CW.~CsvWriter();
+	CW.fp7.close();
 
 	//std::string waiter;
 	//std::cin >> waiter;
+
+	se.clear();
 
 	return;
 
